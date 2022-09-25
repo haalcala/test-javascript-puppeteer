@@ -1,3 +1,27 @@
+const { spawn } = require('child_process');
+const ls = spawn('google-chrome', ["--disable-gpu", "--remote-debugging-port=9222", "--no-first-run", "--no-default-browser-check", "--user-data-dir=remote-profile"]);
+
+ls.stdout.on('data', (data) => {
+  console.log(`stdout: ${data}`);
+});
+
+ls.stderr.on('data', (data) => {
+    const regex = /(ws:\/\/.*)/
+
+    const match = regex.exec(data);
+
+    if (match) {
+        console.log("match[0]:", match[0])
+
+        ws_url = match[0]
+    }
+  console.error(`stderr: ${data}`);
+});
+
+ls.on('close', (code) => {
+  console.log(`child process exited with code ${code}`);
+});
+
 const puppeteer = require('puppeteer');
 
 async function wait(seconds) {
@@ -6,12 +30,20 @@ async function wait(seconds) {
     })
 }
 
+let ws_url
+
 (async () => {
     try {
-        // const browser = await puppeteer.launch({ headless: false });
-        const ws_url = "ws://127.0.0.1:9222/devtools/browser/1cdfb08b-c49e-4116-956c-7c9f6ad51400";
+        while (!ws_url) {
+            await wait(1)
+        }
 
-        const browser = await puppeteer.connect({ browserWSEndpoint: ws_url });
+        console.log(`ws_url: ${ws_url}`)
+
+        // const browser = await puppeteer.launch({ headless: false });
+
+        const browser = await puppeteer.connect({ browserWSEndpoint: ws_url })
+        
         const page = await browser.newPage();
 
         await page.setViewport({ width: 1366, height: 1400 });
